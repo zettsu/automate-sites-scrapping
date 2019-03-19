@@ -31,5 +31,5 @@ class BaseModel(db.Model):
 class Lexology(BaseModel, db.Model):
     __tablename__ = 'lexology'
 
-    id = db.Column(db.Integer, primary_key = True)
+    id = db.Column(db.String, primary_key=True, unique=True)
     name = db.Column(db.String)

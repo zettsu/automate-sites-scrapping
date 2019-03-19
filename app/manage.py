@@ -10,6 +10,7 @@ POSTGRES = {
     'port': '5432',
 }
 
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Sakura23!@localhost:5432/app'
 
 migrate = Migrate(app, db)
