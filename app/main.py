@@ -1,45 +1,68 @@
+import requests as requests
 from flask import Flask, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.types import JSON, TEXT
+import json
 import requests
 import xmltodict
-from models import Lexology, db
+from flask_migrate import Migrate
 
 from bs4 import BeautifulSoup
-
-POSTGRES = {
-    'user': 'postgres',
-    'pw': 'Sakura23!',
-    'db': 'app',
-    'host': 'localhost',
-    'port': '5432',
-}
 
 app = Flask(__name__)
 
 app.config['DEBUG'] = True
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:\%(pw)s@%(host)s:%(port)s/%(db)s' % POSTGRES
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Sakura23!@localhost:5432/app'
+
+db = SQLAlchemy()
 db.init_app(app)
+migrate = Migrate(app, db)
+
+
+class Lexology(db.Model):
+    id = db.Column(db.String(255), primary_key=True)
+    profile_info = db.Column(TEXT)
+    social = db.Column(JSON)
+
 
 @app.route("/")
 def load():
-    #chambers = 'https://chambers.com/sitemap/index'
-    #lexology = 'https://www.lexology.com/firms/sitemap.xml'
-    #xml = requests.get(lexology).content
-    #content_dict = xmltodict.parse(xml)
-    #urls = []
-    #for i in content_dict['urlset']['url']:
-    #    urls.append(i['loc'])
-    #for url in urls:
-    #print(urls[0])
-    #content = requests.get(urls[0]).content
-    #b4s = BeautifulSoup(content, 'html.parser')
-    profile = b4s.find_all('div', class_='profile-details')
-    #lex = Lexology()
-    #lex.id = 1
-    #lex.name = 'pepe'
-    #db.session.add(lex)
-    #db.session.commit()
-    return ''
+    lexology = 'https://www.lexology.com/firms/sitemap.xml'
+    xml = requests.get(lexology, headers={'Connection':'close'}).content
+    requests.session().close()
+    content_dict = xmltodict.parse(xml)
+    urls = []
+
+    for i in content_dict['urlset']['url']:
+        urls.append(i['loc'])
+
+    for url in urls:
+        id = url
+        content = requests.get(urls[0], headers={'Connection':'close'}).content
+        requests.session().close()
+
+        b4s = BeautifulSoup(content, 'html.parser')
+        profile = b4s.find('div', attrs={'class': 'profile-details'})
+        profile_info = b4s.find('div', attrs={'class': 'profileText RhsContent'}).find_all('p')
+
+        social_networks = b4s.find('ul', attrs={'class': 'SocialLinks'}).find_all('a')
+
+        josn_social = {}
+        for social in social_networks:
+            url_site = requests.get(social['href'] , headers={'Connection':'close'}).url
+            josn_social[social['class'][0]] = url_site
+            requests.session().close()
+
+        url_site = profile.find('a', attrs={'class', 'contributor-logo'})['href']
+        lex = Lexology()
+        lex.id = str(id)
+        lex.profile_info = str(profile_info)
+        lex.social = json.dumps(josn_social, ensure_ascii=False)
+        db.session.add(lex)
+        db.session.commit()
+
+    return 'suceess'
 
 
 if __name__ == "__main__":

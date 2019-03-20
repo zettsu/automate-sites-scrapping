@@ -1,7 +1,4 @@
-from flask_sqlalchemy import SQLAlchemy
 import datetime
-
-db = SQLAlchemy()
 
 
 class BaseModel(db.Model):
@@ -28,8 +25,4 @@ class BaseModel(db.Model):
         }
 
 
-class Lexology(BaseModel, db.Model):
-    __tablename__ = 'lexology'
 
-    id = db.Column(db.String, primary_key=True, unique=True)
-    name = db.Column(db.String)
